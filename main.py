@@ -11,12 +11,11 @@ def load_data():
     with open("donations.json", encoding="utf-8") as f:
         raw = json.load(f)
 
-    # Extraction propre des données selon la structure du fichier
-    donations = []
-    for d in raw.get("data", []):
+    data = []
+    for d in raw:  # On itère directement sur la liste
         try:
-            donations.append({
-                "donation_id": str(d["id"]),
+            data.append({
+                "donation_id": d["id"],
                 "donor_name": d.get("display_name", "Anonyme"),
                 "amount": float(d.get("amount", 0)),
                 "message": d.get("message", ""),
@@ -24,8 +23,9 @@ def load_data():
                 "streamer_name": d.get("fundraiser", {}).get("display_name", "Inconnu")
             })
         except Exception as e:
-            print("Erreur dans un don :", e)
-    return donations
+            print("Erreur sur un don :", e)
+
+    return data
 
 # Charger une fois pour tous les endpoints
 donations = load_data()
