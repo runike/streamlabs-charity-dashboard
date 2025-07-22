@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Dashboard Dons</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>body{font-family:sans-serif;max-width:800px;margin:auto;padding:1em;}canvas{max-width:100%;}</style>
+</head>
+<body>
+  <h1>Dashboard des dons</h1>
+  <div id="summary"></div>
+  <h2>Évolution des dons</h2><canvas id="chart"></canvas>
+  <h2>Top 10 donateurs</h2><ul id="top"></ul>
+  <script>
+    const API = "";
+    async function fetchAll() {
+      const [s,t,e] = await Promise.all([
+        fetch("/stats/summary").then(r=>r.json()),
+        fetch("/stats/top_donors").then(r=>r.json()),
+        fetch("/stats/evolution").then(r=>r.json())
+      ]);
+      document.getElementById("summary").innerHTML = `
+        <p>Total: ${s.total} €</p>
+        <p>Moyenne: ${s.mean} €</p>
+        <p>Médiane: ${s.median} €</p>
+        <p>Dons < 1 €: ${s.under1}</p>`;
+      document.getElementById("top").innerHTML = t.map(d=>`<li>${d.donor}: ${d.amount} €</li>`).join("");
+      const ctx = document.getElementById("chart").getContext("2d");
+      new Chart(ctx, {
+        type:'line',
+        data:{
+          labels:e.map(x=>x.date),
+          datasets:[{label:'Dons (€)',data:e.map(x=>x.amount),borderColor:'blue',backgroundColor:'lightblue',fill:true}]
+        }
+      });
+    }
+    fetchAll();
+  </script>
+</body>
+</html>
