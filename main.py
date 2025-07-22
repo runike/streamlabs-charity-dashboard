@@ -1,18 +1,15 @@
 from fastapi import FastAPI
 from datetime import datetime
-from statistics import mean, median
 import json
-import os
 
 app = FastAPI()
 
-# Charger les dons depuis le fichier local donations.json
 def load_data():
     with open("donations.json", encoding="utf-8") as f:
         raw = json.load(f)
 
     data = []
-    for d in raw:  # On itère directement sur la liste
+    for d in raw:
         try:
             data.append({
                 "donation_id": d["id"],
@@ -24,55 +21,47 @@ def load_data():
             })
         except Exception as e:
             print("Erreur sur un don :", e)
-
     return data
 
-# Charger une fois pour tous les endpoints
-donations = load_data()
-
-@app.get("/")
-def home():
-    return {"message": "API Streamlabs Charity prête 👋"}
+donations_data = load_data()
 
 @app.get("/donations")
-def list_donations():
-    return donations
+def get_donations():
+    return donations_data
 
 @app.get("/stats/total")
-def total_amount():
-    return round(sum(d["amount"] for d in donations), 2)
-
-@app.get("/stats/mean")
-def mean_amount():
-    return round(mean([d["amount"] for d in donations]), 2)
-
-@app.get("/stats/median")
-def median_amount():
-    return round(median([d["amount"] for d in donations]), 2)
+def get_total():
+    return round(sum(d["amount"] for d in donations_data), 2)
 
 @app.get("/stats/top_donors")
 def top_donors():
     from collections import defaultdict
-
-    totals = defaultdict(float)
-    for d in donations:
-        name = d["donor_name"]
-        totals[name] += d["amount"]
-
-    sorted_donors = sorted(totals.items(), key=lambda x: x[1], reverse=True)
+    donors = defaultdict(float)
+    for d in donations_data:
+        donors[d["donor_name"]] += d["amount"]
+    sorted_donors = sorted(donors.items(), key=lambda x: x[1], reverse=True)
     return [{"name": name, "amount": round(amount, 2)} for name, amount in sorted_donors[:10]]
+
+@app.get("/stats/by_streamer")
+def by_streamer():
+    from collections import defaultdict
+    streamers = defaultdict(float)
+    for d in donations_data:
+        streamers[d["streamer_name"]] += d["amount"]
+    sorted_streamers = sorted(streamers.items(), key=lambda x: x[1], reverse=True)
+    return [{"streamer": name, "amount": round(amount, 2)} for name, amount in sorted_streamers]
 
 @app.get("/stats/graph")
 def donation_graph():
     from collections import defaultdict
+    import datetime
 
-    graph = defaultdict(float)
-    for d in donations:
-        date = d["created_at"].date().isoformat()
-        graph[date] += d["amount"]
+    timeline = defaultdict(float)
+    for d in donations_data:
+        day = d["created_at"].date().isoformat()
+        timeline[day] += d["amount"]
 
-    return [{"date": date, "amount": round(amount, 2)} for date, amount in sorted(graph.items())]
-
-@app.get("/stats/under1euro")
-def small_donations():
-    return [d for d in donations if d["amount"] < 1.0]
+    return sorted(
+        [{"date": day, "total": round(amount, 2)} for day, amount in timeline.items()],
+        key=lambda x: x["date"]
+    )
